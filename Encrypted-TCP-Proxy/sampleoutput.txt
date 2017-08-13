@@ -1,0 +1,68 @@
+/////////////////////////////////Client://///////////////////////////////////
+
+
+go run client.go -key=1234567890123456 -dport=3333 -pport=2222
+
+Text to send: hello
+sent
+awaiting packet
+received encrypted message
+decrypted Message from server: HELLO
+
+
+
+Text to send: this is a test!
+sent
+awaiting packet
+received encrypted message
+decrypted Message from server: THIS IS A TEST!
+
+
+/////////////////////////////////Server://///////////////////////////////////
+go run server.go -key=1234567890123456 -port=3333
+
+Server starting up
+Awaiting TCP connection from Client
+Accepted connection &{{0xc0420781c0}}
+awaiting message
+received msg:  hello
+
+awaiting message
+received msg:  this is a test!
+
+
+
+/////////////////////////////////Proxy://///////////////////////////////////
+go run proxy.go -key=1234567890123456 -port=2222
+
+Awaiting TCP connection from Client
+Accepted connection &{{0xc0420781c0}}
+awaiting packet
+received packet
+Packet Received: J�`_��_��*m��������
+A
+Decrypted Message:  hello
+
+Decrypted Destination:  3333
+Dialing Destination
+Destination Connected - Passing through to ProxyFunc
+Encrypted Message Received:  J�`_��_��*m��������
+A
+Decrypted Message to be Sent:  hello
+
+waiting for packet
+Sent to Server
+Waiting for Packet from Client
+packet received!
+sent to Client
+awaiting packet
+received
+waiting for packet
+Encrypted Message Received:  ��пG�=%G���G���;DE_������Gש
+Decrypted Message to be Sent:  this is a test
+
+Sent to Server
+Waiting for Packet from Client
+packet received!
+sent to Client
+awaiting packet
