@@ -3,9 +3,8 @@
 //TCP Server Program to receive a Client Connection
 //Client sends a string, Server ToUppers the string, then returns
 //
-// go run server.go -key=1234567890123456 -port=3333
+// go run server.go -port=3333
 //
-// key flag is for encryption key (16,24,32 bytes)
 // port flag is which port the Server will listen on
 // run program with -h for help with flags and to see defaults
 
@@ -13,12 +12,8 @@ package main
 
 import (
 	"bufio"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"strings"
@@ -35,9 +30,6 @@ type Packet struct {
 
 //waitgroup to make sure main function ending does not end program
 var mainwg sync.WaitGroup
-
-//global secret key for encryption. Length of Key determines  16 = AES128, 24 = AES192, 32 = AES256
-var AESkey = flag.String("key", "1234567890123456", "Encryption Key - 16, 24, or 32 byes")
 
 //entry point of application
 func main() {
@@ -89,7 +81,7 @@ func TCPServer(port string) {
 }
 
 //Function to be ran in its own goroutine that handles the data sent from the connected client
-//The function receives input from the client, and capitlizes it, then sends it back.
+//The function receives input from the client, and capitalizes it, then sends it back.
 func HandleConn(conn net.Conn) {
 	for {
 
@@ -109,51 +101,4 @@ func HandleConn(conn net.Conn) {
 		// send new string back to client
 		conn.Write([]byte(newmessage + "\n"))
 	}
-}
-
-// func to create cipher using global AES key
-func cipherCreation() cipher.Block {
-	key := []byte(*AESkey)
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return block
-}
-
-// func to encrypt input bytes
-func encrypt(inputtext []byte) []byte {
-	block := cipherCreation()
-
-	//make initialization vector, and fill it randomly
-	initvec := make([]byte, aes.BlockSize)
-	_, err := io.ReadFull(rand.Reader, initvec)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	//stream the input into the cipher
-	cipherinput := []byte(inputtext)
-	stream := cipher.NewCTR(block, initvec)
-	stream.XORKeyStream(cipherinput, inputtext)
-	cipherinput = append(initvec, cipherinput...)
-
-	return cipherinput
-}
-
-//func to decrypt input bytes
-func decrypt(inputtext []byte) []byte {
-	//create block
-	block := cipherCreation()
-
-	//size input text to work correctly
-	initvec := inputtext[:aes.BlockSize]
-	plaintext := make([]byte, len(inputtext)-aes.BlockSize)
-
-	//decode
-	stream := cipher.NewCTR(block, initvec)
-	stream.XORKeyStream(plaintext, inputtext[aes.BlockSize:])
-
-	return plaintext
 }

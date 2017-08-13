@@ -48,6 +48,20 @@ func main() {
 	//parse flags
 	flag.Parse()
 
+	//ensure the key is the correct size
+	switch len(*AESkey) {
+	case 16:
+		break
+	case 24:
+		break
+	case 32:
+		break
+	default:
+		fmt.Println("length of key is: ", len(*AESkey))
+		fmt.Println("AESKey must be 16, 24, or 32 bytes")
+		os.Exit(1)
+	}
+
 	//Dial the connection to the proxy
 	conn, err := net.Dial("tcp", "127.0.0.1:"+*proxyport)
 	if err != nil {

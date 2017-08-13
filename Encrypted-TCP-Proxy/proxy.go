@@ -24,6 +24,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 	"sync"
 )
 
@@ -47,6 +48,19 @@ var AESkey = flag.String("key", "1234567890123456", "Encryption Key - 16, 24, or
 
 func main() {
 
+	//ensure the key is the correct size
+	switch len(*AESkey) {
+	case 16:
+		break
+	case 24:
+		break
+	case 32:
+		break
+	default:
+		fmt.Println("length of key is: ", len(*AESkey))
+		fmt.Println("AESKey must be 16, 24, or 32 bytes")
+		os.Exit(1)
+	}
 	//recv port for TCP server
 	Rcvport := flag.String("port", "2222", "port to receive on")
 	flag.Parse()
@@ -154,7 +168,7 @@ func HandleIncoming(conn net.Conn) {
 		}
 		fmt.Println("sent to Client")
 
-		//attatch decoder to the connection and wait for the packet
+		//attach decoder to the connection and wait for the packet
 		d := json.NewDecoder(conn)
 
 		var packet Packet

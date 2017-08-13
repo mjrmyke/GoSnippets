@@ -1,4 +1,4 @@
-/////////////////////////////////Client://///////////////////////////////////
+﻿/////////////////////////////////Client://///////////////////////////////////
 
 
 go run client.go -key=1234567890123456 -dport=3333 -pport=2222
@@ -19,7 +19,7 @@ decrypted Message from server: THIS IS A TEST!
 
 
 /////////////////////////////////Server://///////////////////////////////////
-go run server.go -key=1234567890123456 -port=3333
+go run server.go -port=3333
 
 Server starting up
 Awaiting TCP connection from Client
