@@ -6,6 +6,10 @@ decrypts it, and forwards it to its desired destination. The proxy also receives
 and encrypts it, then ships it back to the original client
 
 To use, start the proxy and server before the client. IE:
+
 go run proxy.go
+
 go run server.go
+
 go run client.go
+
