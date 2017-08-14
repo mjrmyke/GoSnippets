@@ -36,17 +36,13 @@ type Packet struct {
 	Message []byte `json: "Message"`
 }
 
-//channels to communicate to each thread
-var packettoclient = make(chan Packet)
-var packettodest = make(chan Packet)
-
-//waitgroup to make sure main function ending does not end program
-var mainwg sync.WaitGroup
-
 //global secret key for encryption. Length of Key determines  16 = AES128, 24 = AES192, 32 = AES256
 var AESkey = flag.String("key", "1234567890123456", "Encryption Key - 16, 24, or 32 byes")
 
 func main() {
+
+	//waitgroup to make sure main function ending does not end program
+	var mainwg sync.WaitGroup
 
 	//ensure the key is the correct size
 	switch len(*AESkey) {
@@ -66,7 +62,7 @@ func main() {
 	flag.Parse()
 
 	//start the TCP server with the associated port
-	go TCPProxyServer(*Rcvport)
+	go TCPProxyServer(*Rcvport, mainwg)
 
 	//have the waitgroup wait until notified that the server has closed
 	mainwg.Add(1)
@@ -74,7 +70,7 @@ func main() {
 
 }
 
-func TCPProxyServer(port string) {
+func TCPProxyServer(port string, mainwg sync.WaitGroup) {
 	defer mainwg.Done()
 
 	//listen for TCP conns on the specified port
@@ -92,17 +88,18 @@ func TCPProxyServer(port string) {
 		connection, err := ln.Accept()
 		if err != nil {
 			fmt.Println("Connection Error: ", err)
-			break
+
+		} else {
+			fmt.Println("Accepted connection", connection)
+			go HandleProxyConn(connection, mainwg)
 		}
-		fmt.Println("Accepted connection", connection)
-		go HandleProxyConn(connection)
 
 	}
 	mainwg.Done()
 
 }
 
-func HandleProxyConn(conn net.Conn) {
+func HandleProxyConn(conn net.Conn, mainwg sync.WaitGroup) {
 	// add json decoder to connection
 	d := json.NewDecoder(conn)
 
@@ -134,8 +131,13 @@ func HandleProxyConn(conn net.Conn) {
 	}
 
 	fmt.Println("Destination Connected - Passing through to ProxyFunc")
-	go HandleIncoming(conn)
-	go HandleOutgoing(destconn, packet)
+
+	//channels to communicate to each thread
+	var packettoclient = make(chan Packet)
+	var packettodest = make(chan Packet)
+
+	go HandleIncoming(conn, packettoclient, packettodest, mainwg)
+	go HandleOutgoing(destconn, packet, packettodest, packettoclient, mainwg)
 	//have the waitgroup wait until notified that the server has closed
 	mainwg.Add(2)
 
@@ -143,7 +145,7 @@ func HandleProxyConn(conn net.Conn) {
 
 //function to be ran in its own goroutine
 //Sends and Receives information to Clients connection. Message is always encrypted
-func HandleIncoming(conn net.Conn) {
+func HandleIncoming(conn net.Conn, packettoclient, packettodest chan Packet, mainwg sync.WaitGroup) {
 	defer mainwg.Done()
 	var err error
 	var pckt Packet
@@ -193,7 +195,7 @@ func HandleIncoming(conn net.Conn) {
 //information received is to be encrypted, packaged in a packet
 //and shipped back to client via the packettoclient channel
 
-func HandleOutgoing(conn net.Conn, packet Packet) {
+func HandleOutgoing(conn net.Conn, packet Packet, packettodest, packettoclient chan Packet, mainwg sync.WaitGroup) {
 	defer mainwg.Done()
 	//handles base case
 	firstrun := true
@@ -225,7 +227,7 @@ func HandleOutgoing(conn net.Conn, packet Packet) {
 		}
 
 		//encrypt, place in package, and send to channel
-		EncryptShipPacket(message)
+		EncryptShipPacket(message, packettoclient)
 
 		//base case handled!
 		firstrun = false
@@ -234,7 +236,7 @@ func HandleOutgoing(conn net.Conn, packet Packet) {
 }
 
 //func that encrypts, places in package, and sends to channel
-func EncryptShipPacket(message string) {
+func EncryptShipPacket(message string, packettoclient chan Packet) {
 	msg := encrypt([]byte(message))
 	pckt := Packet{Message: msg}
 	packettoclient <- pckt

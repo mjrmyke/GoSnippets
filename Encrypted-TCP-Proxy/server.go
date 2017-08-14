@@ -76,19 +76,19 @@ func TCPServer(port string) {
 		go HandleConn(connection)
 
 	}
-	mainwg.Done()
 
 }
 
 //Function to be ran in its own goroutine that handles the data sent from the connected client
 //The function receives input from the client, and capitalizes it, then sends it back.
 func HandleConn(conn net.Conn) {
+	r := bufio.NewReader(conn)
 	for {
 
 		fmt.Println("awaiting message")
 
 		//read the string from the connection
-		message, err := bufio.NewReader(conn).ReadString('\n')
+		message, err := r.ReadString('\n')
 		if err != nil {
 			log.Fatal(err)
 		}
